@@ -1,3 +1,6 @@
+const dotenv = require('dotenv');
+
+
 // MySQL
 const db = require('./models');
 db.sequelize
