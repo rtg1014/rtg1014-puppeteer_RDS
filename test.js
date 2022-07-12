@@ -2,6 +2,9 @@
 const puppeteer = require('puppeteer');
 const fs = require('fs');
 
+// models
+const { Posting } = require('./models');
+
 // util
 const { dateFormatter } = require('./util');
 
@@ -12,6 +15,12 @@ let tomorrow = new Date(today); //내일
 tomorrow.setDate(tomorrow.getDate() + 1);
 let dayAfterTomorrow = new Date(today);
 dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2);
+let resultCN = [];
+let resultTT = [];
+let resultCR = [];
+let resultAD = [];
+let resultCD = [];
+let resultKD = [];
 
 (async () => {
   console.info('start');
@@ -32,7 +41,7 @@ dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2);
     page.goto(
       'https://www.jobkorea.co.kr/recruit/joblist?menucode=local&localorder=1'
     ), // 테스트할 사이즈 주소입력
-    page.waitForNavigation({ waitUntil: ['networkidle2'] }), /// 로딩 될때까지 기다려라 의미
+    page.waitForNavigation(), /// 로딩 될때까지 기다려라 의미
   ]);
 
   let target = "//span[text()='대기업']/ancestor::button";
@@ -43,14 +52,36 @@ dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2);
 
   await Promise.all([
     await s.click(),
-    page.waitForNavigation({ waitUntil: ['networkidle2'] }), /// 로딩 될때까지 기다려라 의미
-  ]).then(companyName());
+    page.waitForNavigation(), /// 로딩 될때까지 기다려라 의미
+  ]).then(nextPage());
   // .then(close());
   // .then(companyName())  너는 통과
   // .then(smallInfo());
   //   .then(companyDate())
   //   .then(keywords())
 
+  /// 페이지 누르기 위한 함수
+  async function nextPage() {
+    let numofpage = 2;
+    do {
+      let targetPage = `//a[@href="/recruit/_GI_List?Page=${numofpage}"]`;
+      // await page.waitForTimeout(3000) 사이트 접속후 3초 기다림
+      await page.waitForXPath(targetPage);
+      let aaa = await page.$x(targetPage);
+      aaa = aaa[0];
+      console.log(`it is page ${numofpage}!`);
+      // if(게임잡공고가 나오면){
+      //   크롤링그만해
+      // }
+      await companyName();
+      await Promise.all([
+        await aaa.evaluate((e) => e.click()),
+        page.waitForNavigation(), /// 로딩 될때까지 기다려라 의미
+      ]);
+
+      numofpage++;
+    } while (numofpage < 11);
+  }
 
   //-----------------------------------------------------------------------------------------
 
@@ -59,19 +90,19 @@ dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2);
     let companyName = '//div[@class="titBx"]/ancestor::tr/td/a';
     await page.waitForXPath(companyName); ///()이 다돌때까지 기다린다
     temp = await page.$x(companyName); /// 찾아서 넣어준다
-    let resultCN = [];
+    resultCN = [];
     for (item of temp) {
       const value = await item.evaluate((el) => el.textContent);
       let valueTrim = value.trim();
       resultCN.push(valueTrim);
     }
     len = resultCN.length;
-    console.log('length of postings', len);
+    // console.log('length of postings', len);
     // console.log('list of companyName', resultCN);
-    console.log('count CN', resultCN.length);
-    console.log('companyName done');
+    // console.log('count CN', resultCN.length);
+    // console.log('companyName done');
 
-    title();
+    await title();
   }
 
   //   공고제목
@@ -80,7 +111,7 @@ dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2);
     await page.waitForXPath(title); ///()이 다돌때까지 기다린다
     temp = await page.$x(title); /// 찾아서 넣어준다
 
-    let resultTT = [];
+    resultTT = [];
 
     for (let i = 0; i < len; i++) {
       const value = await temp[i].evaluate((el) => el.textContent);
@@ -88,10 +119,10 @@ dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2);
       resultTT.push(valueTrim);
     }
     // console.log('list of title', resultTT);
-    console.log('count TT', resultTT.length);
-    console.log('title done');
+    // console.log('count TT', resultTT.length);
+    // console.log('title done');
 
-    smallInfo();
+    await smallInfo();
   }
 
   //   경력, 학력, 근무지 등
@@ -100,7 +131,8 @@ dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2);
       '//p[@class="etc"]/ancestor::div//div[@class="titBx"]/p[@class="etc"]/span[@class="cell"]';
     await page.waitForXPath(smallInfo); ///()이 다돌때까지 기다린다
     temp = await page.$x(smallInfo); /// 찾아서 넣어준다
-    let resultSI = [];
+    resultCR = [];
+    resultAD = [];
     let a = '';
 
     for (item of temp) {
@@ -118,7 +150,30 @@ dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2);
         valueTrim.indexOf('연수생') !== -1 ||
         valueTrim.indexOf('병역특례') !== -1 ||
         valueTrim.indexOf('위촉직') !== -1 ||
-        valueTrim.indexOf('만원 이상') !== -1
+        valueTrim.indexOf('만원') !== -1 ||
+        valueTrim.indexOf('사원급') !== -1 ||
+        valueTrim.indexOf('팀원') !== -1 ||
+        valueTrim.indexOf('주임') !== -1 ||
+        valueTrim.indexOf('대리') !== -1 ||
+        valueTrim.indexOf('과장') !== -1 ||
+        valueTrim.indexOf('차장') !== -1 ||
+        valueTrim.indexOf('부장') !== -1 ||
+        valueTrim.indexOf('임원') !== -1 ||
+        valueTrim.indexOf('CEO') !== -1 ||
+        valueTrim.indexOf('팀장') !== -1 ||
+        valueTrim.indexOf('매니저') !== -1 ||
+        valueTrim.indexOf('실장') !== -1 ||
+        valueTrim.indexOf('파트장') !== -1 ||
+        valueTrim.indexOf('그룹장') !== -1 ||
+        valueTrim.indexOf('본부장') !== -1 ||
+        valueTrim.indexOf('센터장') !== -1 ||
+        valueTrim.indexOf('지점장') !== -1 ||
+        valueTrim.indexOf('지사장') !== -1 ||
+        valueTrim.indexOf('원장') !== -1 ||
+        valueTrim.indexOf('국장') !== -1 ||
+        valueTrim.indexOf('공장장') !== -1 ||
+        valueTrim.indexOf('~') !== -1 ||
+        valueTrim.indexOf('(') !== -1
       )
         continue;
       valueTrim = value.replace(/[0-9][년]+/g, '');
@@ -138,18 +193,22 @@ dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2);
           a += valueTrim;
         }
       } else {
-        resultSI.push(a);
+        if (valueTrim.indexOf('·') > 1) valueTrim = '경력무관';
+        if (valueTrim.indexOf('↑') > 1) valueTrim = '경력';
+        resultCR.push(a.split(' ')[0]);
+        resultAD.push(a.split(' ')[1] + ' ' + a.split(' ')[2]);
         a = valueTrim;
-        if (resultSI.length > len) break;
+        if (resultCR.length > len) break;
       }
     }
-    resultSI.splice(0, 1); // 배열의 0번째 인덱스인 빈 값 삭제
+    resultCR.splice(0, 1); // 배열의 0번째 인덱스인 빈 값 삭제
+    resultAD.splice(0, 1); // 배열의 0번째 인덱스인 빈 값 삭제
 
     // console.log('list of smallinfo', resultSI);
-    console.log('count SI', resultSI.length);
-    console.log('smallinfo done');
+    // console.log('count SI', resultSI.length);
+    // console.log('smallinfo done');
 
-    companyDate();
+    await companyDate();
   }
 
   // 채용공고 날짜
@@ -157,7 +216,7 @@ dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2);
     let companyDate = '//span[@class="date dotum"]//./text()';
     await page.waitForXPath(companyDate); ///()이 다돌때까지 기다린다
     temp = await page.$x(companyDate); /// 찾아서 넣어준다
-    let resultCD = [];
+    resultCD = [];
     for (item of temp) {
       if (resultCD.length === len) break;
       const value = await item.evaluate((el) => el.textContent);
@@ -177,10 +236,10 @@ dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2);
       resultCD.push(valueTrim);
     }
     // console.log('list of companyDate', resultCD);
-    console.log('count CD', resultCD.length);
-    console.log('company date done');
+    // console.log('count CD', resultCD.length);
+    // console.log('company date done');
 
-    keywords();
+    await keywords();
   }
 
   // 채용공고 키워드 목록
@@ -188,7 +247,7 @@ dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2);
     let keywords = '//@data-gainfo';
     await page.waitForXPath(keywords); ///()이 다돌때까지 기다린다
     temp = await page.$x(keywords); /// 찾아서 넣어준다
-    let resultKD = [];
+    resultKD = [];
 
     for (item of temp) {
       if (resultKD.length === len) break;
@@ -197,37 +256,29 @@ dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2);
       resultKD.push(test.dimension44);
     }
     // console.log('list of keywords Sub', resultKD);
-    console.log('count of keywords Sub', resultKD.length);
-    console.log('keywords done');
-    console.log('plz make next page');
+    // console.log('count of keywords Sub', resultKD.length);
+    // console.log('keywords done');
+    // console.log('plz make next page');
+    for (let i = 0; i < len; i++) {
+      await Posting.create({
+        companyName: resultCN[i],
+        title: resultTT[i],
+        career: resultCR[i],
+        education: resultKD[i],
+        address: resultAD[i],
+        deadline: resultCD[i],
+        url: 'ㅇㅇ',
+      });
+    }
   }
 
-  console.log(222, len);
-  async function close() {
-    await page.waitForTimeout(3000); // 눈으로 확인하기 위해 3초간 멈춤
-    await browser.close(); // 브라우저 종료
-  }
-  console.log(3333, len);
+  // console.log(222, len);
+  // async function close() {
+  //   await page.waitForTimeout(3000); // 눈으로 확인하기 위해 3초간 멈춤
+  //   await browser.close(); // 브라우저 종료
+  // }
+  // console.log(3333, len);
 })();
-
-// let targetNumber1 = "//span[text()='1']/ancestor::li"
-//     // await page.waitForTimeout(3000) 사이트 접속후 3초 기다림
-//     await page.waitForXPath(targetNumber1)
-//     let s1 = await page.$x(targetNumber1)
-//     ss = ss[0]
-//     await ss.click()
-
-//     await Promise.all([
-//         page.goto("https://www.jobkorea.co.kr/recruit/joblist?menucode=local&localorder=1"),      // 테스트할 사이즈 주소입력
-//         page.waitForNavigation()    /// 로딩 될때까지 기다려라 의미
-//     ])
-
-//     let targetNumber2 = "//a[text()='2']"
-//     // await page.waitForTimeout(3000) 사이트 접속후 3초 기다림
-//     await page.waitForXPath(targetNumber2)
-//     let s2 = await page.$x(targetNumber2)
-//     ss = s2[0]
-//     await s2.click()
 
 /*
 //div[@class="titBx"]/ancestor::tr/td/a/text()  기업이름들
@@ -240,28 +291,4 @@ dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2);
 
 
 //div[@class="titBx"]/ancestor::tr/td/div/p/span/text(${numofpage}) 직무, 채용, 부분 텍스트까지는 뽑아냄
-
-
-
-*/
-
-/*
-
-let numofpage = 1;
-let tempSave = 0; //10의자리 숫자
-
-페이지 이동 클릭 이벤트
-
-크롤링 로직
-
-if(numofpage % 10 ===0){ 
-  tempSave = numofpage/10
-  numofpage = '다음>'
-} else if(numofpage.indexOf('다음')>-1) { numofpage = tempSave*10 + 2 } 12
-else { numofpage++; }
-
-*/
-
-/*
-
 */
