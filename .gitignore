@@ -1,5 +1,6 @@
-package.json
-package-lock.json
+
+backup.js
+backup2.js
 
 
 # Dependency directories
@@ -10,4 +11,5 @@ node_modules/
 
 #public
 public/
+
 
