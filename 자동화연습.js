@@ -35,9 +35,9 @@ const puppeteer = require('puppeteer');
   await Promise.all([
     await sss.click(),
     page.waitForNavigation(), /// 로딩 될때까지 기다려라 의미
-  ]).then(nextPage());
+  ]).then(companyName());
 
-  //ancestor::div[@id="dvGIPaging"]/div[@class="tplPagination newVer"]/ul/li/a[@data-page="2"]
+  
 
   // / 페이지 누르기 위한 함수
   async function nextPage() {
@@ -61,7 +61,7 @@ const puppeteer = require('puppeteer');
 
   /// 기업이름
   async function companyName() {
-    let companyName = '//div[@class="titBx"]/ancestor::tr/td/a';
+    let companyName = "//a[@href]/ancestor::div[@class='titBx']/strong";
     await page.waitForXPath(companyName); ///()이 다돌때까지 기다린다
     temp = await page.$x(companyName); /// 찾아서 넣어준다
     let resultCN = [];
@@ -73,7 +73,7 @@ const puppeteer = require('puppeteer');
     len = resultCN.length;
     console.log('length of postings', len);
     // console.log('list of   companyName', resultCN);
-    console.log('count CN', resultCN.length);
+    console.log('count CN', resultCN);
     console.log('companyName done');
   }
 
@@ -115,3 +115,8 @@ if(numofpage % 10 ===0){
 
 
 */
+
+
+
+
+//        "//a[@href]/ancestor::div[@class='titBx']/strong"

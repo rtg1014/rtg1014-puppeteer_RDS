@@ -1,9 +1,16 @@
 // modules
 const puppeteer = require('puppeteer');
-const fs = require('fs');
+const { Op } = require('sequelize');
 
 // models
-const { Posting } = require('./models');
+const {
+  Posting,
+  Career,
+  CompanyType,
+  City,
+  Job,
+  posting_job,
+} = require('./models');
 
 // util
 const { dateFormatter } = require('./util');
@@ -21,11 +28,12 @@ let resultCR = [];
 let resultAD = [];
 let resultCD = [];
 let resultKD = [];
+let resultURL = [];
 
 (async () => {
   console.info('start');
   const browser = await puppeteer.launch({
-    headless: false,
+    headless: true,
     // 디폴트가 headless 라서 브라우저가 보이지 않으므로 false 해야 브라우저가 보임.
     args: ['--window-size=1920,1080'],
     slow: 3,
@@ -80,7 +88,7 @@ let resultKD = [];
       ]);
 
       numofpage++;
-    } while (numofpage < 11);
+    } while (len);
   }
 
   //-----------------------------------------------------------------------------------------
@@ -193,10 +201,21 @@ let resultKD = [];
           a += valueTrim;
         }
       } else {
-        if (valueTrim.indexOf('·') > 1) valueTrim = '경력무관';
-        if (valueTrim.indexOf('↑') > 1) valueTrim = '경력';
+        if (valueTrim.indexOf('·') > -1) valueTrim = '경력무관';
+        if (
+          valueTrim.indexOf('경력') > -1 &&
+          valueTrim.indexOf('신입') === -1 &&
+          valueTrim.indexOf('무관') === -1
+        )
+          valueTrim = '경력';
         resultCR.push(a.split(' ')[0]);
-        resultAD.push(a.split(' ')[1] + ' ' + a.split(' ')[2]);
+        if (
+          a.split(' ')[2] === undefined ||
+          a.split(' ')[2] === '전지역' ||
+          a.split(' ')[2] === '중국전지역'
+        )
+          resultAD.push(a.split(' ')[1] + ' 전체');
+        else resultAD.push(a.split(' ')[1] + ' ' + a.split(' ')[2]);
         a = valueTrim;
         if (resultCR.length > len) break;
       }
@@ -206,7 +225,7 @@ let resultKD = [];
 
     // console.log('list of smallinfo', resultSI);
     // console.log('count SI', resultSI.length);
-    // console.log('smallinfo done');
+    // console.log('resultCR', resultCR, 'resultAD', resultAD);
 
     await companyDate();
   }
@@ -239,11 +258,27 @@ let resultKD = [];
     // console.log('count CD', resultCD.length);
     // console.log('company date done');
 
-    await keywords();
+    await getURL();
+  }
+
+  // url
+  async function getURL() {
+    let keywords = '//div[@class="titBx"]//a/@href';
+    await page.waitForXPath(keywords); ///()이 다돌때까지 기다린다
+    temp = await page.$x(keywords); /// 찾아서 넣어준다
+    resultURL = [];
+    for (item of temp) {
+      if (resultURL.length === len) break;
+      const value = await item.evaluate((el) => el.textContent);
+      const fullValue = 'https://www.jobkorea.co.kr' + value;
+      resultURL.push(fullValue);
+    }
+
+    await Keywords();
   }
 
   // 채용공고 키워드 목록
-  async function keywords() {
+  async function Keywords() {
     let keywords = '//@data-gainfo';
     await page.waitForXPath(keywords); ///()이 다돌때까지 기다린다
     temp = await page.$x(keywords); /// 찾아서 넣어준다
@@ -255,20 +290,61 @@ let resultKD = [];
       let test = JSON.parse(value); // JSON 텍스트를 JSON 객체로 변환
       resultKD.push(test.dimension44);
     }
+
+    // // job id 테스트
+    // let jobsub = resultKD[0].split(',');
+    // let jobid= await Job.findOne({
+    //   where:{sub: jobsub[0]}
+    // })
     // console.log('list of keywords Sub', resultKD);
+    // console.log('jobid는 2나와야댐 ', jobid.id);
+
     // console.log('count of keywords Sub', resultKD.length);
     // console.log('keywords done');
     // console.log('plz make next page');
+
+    //  🎇db 삽입 부분🎇 
     for (let i = 0; i < len; i++) {
-      await Posting.create({
+      let career = await Career.findOne({
+        where: { type: resultCR[i] },
+      });
+
+      let companyType = await CompanyType.findOne({
+        where: { type: '대기업' },
+      });
+
+      let city;
+
+      city = await City.findOne({
+        where: {
+          [Op.and]: [
+            { main: resultAD[i].split(' ')[0] },
+            { sub: resultAD[i].split(' ')[1] },
+          ],
+        },
+      });
+
+      let post = await Posting.create({
         companyName: resultCN[i],
         title: resultTT[i],
-        career: resultCR[i],
-        education: resultKD[i],
-        address: resultAD[i],
         deadline: resultCD[i],
-        url: 'ㅇㅇ',
+        url: resultURL[i],
+        companyTypeId: companyType.id,
+        careerId: career.id,
+        cityId: city.id,
       });
+
+      let jobSub = resultKD[i].split(',');
+      for (let j = 0; j < jobSub.length; j++) {
+        let job = await Job.findOne({
+          where: { sub: jobSub[j] },
+        });
+
+        await posting_job.create({
+          postingId: post.id,
+          jobId: job.id,
+        });
+      }
     }
   }
 
@@ -292,3 +368,5 @@ let resultKD = [];
 
 //div[@class="titBx"]/ancestor::tr/td/div/p/span/text(${numofpage}) 직무, 채용, 부분 텍스트까지는 뽑아냄
 */
+
+//div[@class="titBx"]//a/@href  //url
