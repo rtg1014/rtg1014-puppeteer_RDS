@@ -21,7 +21,7 @@ const puppeteer = require('puppeteer');
 
   await Promise.all([
     page.goto(
-      'https://www.jobkorea.co.kr/recruit/joblist?menucode=local&localorder=1'
+      'https://www.jobkorea.co.kr/recruit/joblist?menucode=local&localorder=1#anchorGICnt_1'
     ), // 테스트할 사이즈 주소입력
     page.waitForNavigation(), /// 로딩 될때까지 기다려라 의미
   ]);
@@ -35,9 +35,19 @@ const puppeteer = require('puppeteer');
   await Promise.all([
     await sss.click(),
     page.waitForNavigation(), /// 로딩 될때까지 기다려라 의미
-  ]).then(companyName());
+  ]).then(selectCategory());
+// ----------------------------------------------------------
 
-  
+
+//카테고리 누르기
+async function selectCategory() {
+  targetCategory= '//div[@class="tplSltBx tplGiSlt devTplSltBx"]/select[@name="orderTab"]';
+  await page.select('select[name="orderTab"]','등록일순')
+.then(nextPage());
+}
+
+
+  //---------------------------------------------------------
 
   // / 페이지 누르기 위한 함수
   async function nextPage() {
@@ -56,8 +66,9 @@ const puppeteer = require('puppeteer');
       ]);
 
       numofpage++;
-    } while (numofpage < 2001);
+    } while (numofpage < 10);
   }
+
 
   /// 기업이름
   async function companyName() {
