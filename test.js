@@ -58,15 +58,24 @@ let resultURL = [];
   let s = await page.$x(target);
   s = s[0]; // page.$x()는 배열을 리턴하므로 [0] 으로 해서 첫번째 element를 사용함.
 
+
+  
   await Promise.all([
     await s.click(),
     page.waitForNavigation(), /// 로딩 될때까지 기다려라 의미
-  ]).then(nextPage());
+  ]).then(selectCategory());
   // .then(close());
   // .then(companyName())  너는 통과
   // .then(smallInfo());
   //   .then(companyDate())
   //   .then(keywords())
+
+//카테고리 누르기
+async function selectCategory() {
+  targetCategory= '//div[@class="tplSltBx tplGiSlt devTplSltBx"]/select[@name="orderTab"]';
+  await page.select('select[name="orderTab"]','등록일순')
+.then(nextPage());
+
 
   /// 페이지 누르기 위한 함수
   async function nextPage() {
@@ -347,7 +356,7 @@ let resultURL = [];
       }
     }
   }
-
+}
   // console.log(222, len);
   // async function close() {
   //   await page.waitForTimeout(3000); // 눈으로 확인하기 위해 3초간 멈춤

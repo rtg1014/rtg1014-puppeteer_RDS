@@ -48,29 +48,7 @@ async function selectCategory() {
 
 
   //---------------------------------------------------------
-
-  // / 페이지 누르기 위한 함수
-  async function nextPage() {
-    let numofpage = 2;
-    do {
-      console.log(`it is page ${numofpage}!`);
-      let targetPage = `//a[@href="/recruit/_GI_List?Page=${numofpage}"]`;
-      // await page.waitForTimeout(3000) 사이트 접속후 3초 기다림
-      await page.waitForXPath(targetPage);
-      let aaa = await page.$x(targetPage);
-      aaa = aaa[0];
-      console.log(`it is page ${numofpage}!`);
-      await Promise.all([
-        await aaa.evaluate((e) => e.click()),
-        page.waitForNavigation(), /// 로딩 될때까지 기다려라 의미
-      ]);
-
-      numofpage++;
-    } while (numofpage < 10);
-  }
-
-
-  /// 기업이름
+ /// 기업이름
   async function companyName() {
     let companyName = "//a[@href]/ancestor::div[@class='titBx']/strong";
     await page.waitForXPath(companyName); ///()이 다돌때까지 기다린다
@@ -86,7 +64,35 @@ async function selectCategory() {
     // console.log('list of   companyName', resultCN);
     console.log('count CN', resultCN);
     console.log('companyName done');
+
   }
+ 
+ 
+  // / 페이지 누르기 위한 함수
+  async function nextPage() {
+    let numofpage = 2;
+    do {
+      console.log(`it is page ${numofpage}!`);
+      let targetPage = `//a[@href="/recruit/_GI_List?Page=${numofpage}"]`;
+      // await page.waitForTimeout(3000) 사이트 접속후 3초 기다림
+      await page.waitForXPath(targetPage);
+      let aaa = await page.$x(targetPage);
+      aaa = aaa[0];
+      console.log(`it is page ${numofpage}!`);3
+     
+      await companyName();
+
+      await Promise.all([
+        await aaa.evaluate((e) => e.click()),
+        page.waitForNavigation(), /// 로딩 될때까지 기다려라 의미
+      ]);
+
+      numofpage++;
+    } while (numofpage < 10);
+  }
+
+
+ 
 
   // /// 크롤링 시작부분
   // await Promise.all([
